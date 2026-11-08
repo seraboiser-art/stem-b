@@ -1,0 +1,468 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>STEM B Class Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&family=Silkscreen:wght@400;700&display=swap">
+<style>
+/* Layout: an RPG menu screen. A centred stack of pixel windows (today, weekly schedule, cleaning crew)
+   floating over a stepped dusk sky. #poster-schedule / #poster-cleaners render one board as a fixed
+   1000x707 (A4 landscape) frame, sized for screenshots and group-chat posts. */
+:root{
+  color-scheme: dark;
+  /* sky bands, top to bottom */
+  --sky-0:#110c30; --sky-1:#19124a; --sky-2:#241960; --sky-3:#372172; --sky-4:#51287c; --sky-5:#76327e; --sky-6:#9f467a;
+  /* windows */
+  --win:#150f3a; --win-hi:#221a56; --line:#efe9ff; --shade:#07051a;
+  /* text */
+  --ink:#f7f3ff; --ink-dim:#b9aee2; --ink-faint:#8a7dc2;
+  --gold:#ffd447; --gold-dk:#b0701c; --on-chip:#170f33;
+  /* one colour per subject */
+  --c-ucsp:#ff7366; --c-sp:#ffb33b; --c-peh:#e8ef6c; --c-chem:#62e08c; --c-bp:#4cc6ff; --c-pr2:#ab94ff; --c-cle:#ff8fd9;
+  /* type */
+  --f-pixel:"Silkscreen","Courier New",ui-monospace,monospace;
+  --f-body:"Pixelify Sans","Trebuchet MS",system-ui,sans-serif;
+  --px:4px;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{background:var(--sky-0)}
+body{margin:0;min-height:100vh;background:var(--sky-0);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.35}
+a{color:var(--gold);text-underline-offset:4px}
+:focus-visible{outline:var(--px) solid var(--gold);outline-offset:6px}
+
+/* ---------- sky ---------- */
+.sky{background:linear-gradient(to bottom,var(--sky-0) 0 18%,var(--sky-1) 18% 35%,var(--sky-2) 35% 50%,var(--sky-3) 50% 63%,var(--sky-4) 63% 75%,var(--sky-5) 75% 87%,var(--sky-6) 87% 100%)}
+.sky>canvas{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated}
+.sky--page{position:fixed;inset:0;z-index:0}
+.sky--abs{position:absolute;inset:0;z-index:0}
+.spr{display:block;flex:none;image-rendering:pixelated}
+
+/* ---------- pixel box: notched 4px outline + hard drop shadow ---------- */
+.pxbox{
+  background:var(--bg,var(--win));
+  box-shadow:
+    0 calc(var(--px) * -1) 0 0 var(--edge,var(--line)),
+    0 var(--px) 0 0 var(--edge,var(--line)),
+    calc(var(--px) * -1) 0 0 0 var(--edge,var(--line)),
+    var(--px) 0 0 0 var(--edge,var(--line)),
+    calc(var(--px) * 2) calc(var(--px) * 3) 0 0 var(--drop,var(--shade));
+}
+.win{--bg:linear-gradient(var(--win-hi) 0 8px,var(--win) 8px);padding:24px 26px 28px;min-width:0}
+.win-hd{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 18px;margin-bottom:22px}
+.win-title{margin:0;display:flex;align-items:center;gap:12px;font:700 24px/1.1 var(--f-pixel);color:var(--gold);letter-spacing:.03em;text-transform:uppercase;text-wrap:balance}
+.win-note{font:500 16px/1.3 var(--f-body);color:var(--ink-dim)}
+.lbl{font:600 13px/1 var(--f-body);letter-spacing:.16em;text-transform:uppercase;color:var(--ink-dim)}
+
+/* ---------- board ---------- */
+.board{position:relative;z-index:1;max-width:1120px;margin:0 auto;padding-block:28px 56px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  display:flex;flex-direction:column;gap:40px}
+.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:18px 24px;padding:8px 4px 0}
+.brand{display:flex;align-items:center;gap:20px}
+.eyebrow{font:600 14px/1 var(--f-body);letter-spacing:.24em;text-transform:uppercase;color:var(--ink-dim)}
+h1.title{margin:10px 0 0;font:700 64px/.9 var(--f-pixel);color:var(--gold);letter-spacing:.02em;
+  text-shadow:4px 4px 0 var(--gold-dk),8px 8px 0 var(--shade)}
+.datechip{--bg:var(--win-hi);--drop:transparent;padding:10px 14px;margin:0 6px 14px;font:700 16px/1 var(--f-pixel);color:var(--ink);font-variant-numeric:tabular-nums}
+
+/* today / next-up window */
+.lineup{display:flex;flex-wrap:wrap;align-items:stretch;gap:16px 14px}
+.mini{display:flex;flex-direction:column;gap:9px;min-width:0}
+.mini-p{font:600 13px/1 var(--f-body);letter-spacing:.12em;color:var(--ink-dim);text-transform:uppercase;white-space:nowrap}
+.mini .chip{flex:1;padding:12px 14px;--chip-fs:16px}
+.mini-brk{display:flex;align-items:flex-end;padding:0 2px 14px}
+.crewline{margin-top:26px;padding-top:20px;border-top:var(--px) solid var(--win-hi);display:flex;flex-wrap:wrap;align-items:center;gap:12px 18px}
+.tags{display:flex;flex-wrap:wrap;gap:14px}
+.ntag{--bg:var(--win-hi);--drop:transparent;padding:7px 11px;font:500 17px/1 var(--f-body)}
+
+/* ---------- subject chip ---------- */
+.chip{
+  --c:var(--c-bp);
+  --chip-edge:color-mix(in srgb,var(--c) 38%,var(--shade));
+  --chip-lo:color-mix(in srgb,var(--c) 74%,var(--shade));
+  --chip-hi:color-mix(in srgb,var(--c) 55%,#ffffff);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
+  padding:6px 10px;min-width:0;text-align:center;background:var(--c);color:var(--on-chip);
+  box-shadow:
+    0 calc(var(--px) * -1) 0 0 var(--chip-edge),
+    0 var(--px) 0 0 var(--chip-edge),
+    calc(var(--px) * -1) 0 0 0 var(--chip-edge),
+    var(--px) 0 0 0 var(--chip-edge),
+    inset 0 calc(var(--px) * -1) 0 0 var(--chip-lo),
+    inset 0 var(--px) 0 0 var(--chip-hi);
+}
+.code{font:700 var(--chip-fs,20px)/1.08 var(--f-pixel);letter-spacing:.02em;text-transform:uppercase;text-wrap:balance;overflow-wrap:anywhere}
+.tag{font:600 12px/1 var(--f-body);letter-spacing:.1em;text-transform:uppercase;padding:4px 7px;background:color-mix(in srgb,var(--shade) 16%,transparent)}
+
+/* ---------- weekly timetable ---------- */
+.tt{
+  --pr:minmax(60px,auto); --br:24px; --chip-fs:20px; --plw:64px;
+  display:grid;grid-template-columns:var(--plw) repeat(4,minmax(0,1fr));
+  grid-template-rows:auto var(--pr) var(--br) var(--pr) var(--pr) var(--br) var(--pr) var(--pr) var(--br) var(--pr) var(--pr);
+  column-gap:14px;row-gap:12px;
+}
+.tt>*{grid-column:var(--col,1);grid-row:var(--r,1) / span var(--s,1);min-width:0}
+.corner{align-self:end;padding-bottom:8px;font:600 12px/1 var(--f-body);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-faint)}
+.dh{align-self:end;display:flex;flex-direction:column;align-items:center;gap:8px;padding-bottom:8px;font:700 24px/1 var(--f-pixel);color:var(--ink)}
+.dh.is-focus{color:var(--gold)}
+.badge{font:700 11px/1 var(--f-body);letter-spacing:.14em;text-transform:uppercase;padding:5px 8px;background:var(--gold);color:var(--on-chip);white-space:nowrap}
+.pl{display:flex;align-items:center;font:700 16px/1 var(--f-pixel);text-transform:uppercase;color:var(--ink-dim)}
+.focus-col{grid-row:1 / -1;margin:-12px -7px;--bg:color-mix(in srgb,var(--gold) 9%,transparent);--edge:var(--gold);--drop:transparent}
+.brk{grid-column:1 / -1;display:flex;align-items:center;gap:12px}
+.brk-lbl{width:var(--plw);flex:none;font:600 12px/1 var(--f-body);letter-spacing:.16em;text-transform:uppercase;color:var(--ink-faint)}
+.dots{flex:1;height:var(--px);opacity:.7;background:repeating-linear-gradient(90deg,var(--ink-faint) 0 8px,transparent 8px 16px)}
+.hp{display:flex;align-items:center;gap:4px;font:700 11px/1 var(--f-body);letter-spacing:.1em;color:var(--ink-faint)}
+.hp b{margin-right:4px}
+
+.tabs{display:none;gap:14px;margin:0 0 26px}
+.tab{position:relative;flex:1;min-width:0;padding:12px 0;border:0;cursor:pointer;font:700 16px/1 var(--f-pixel);color:var(--ink);--bg:var(--win-hi);--drop:transparent}
+.tab:hover{--bg:color-mix(in srgb,var(--win-hi) 70%,var(--ink-faint))}
+.tab[aria-pressed="true"]{--bg:var(--gold);--edge:var(--gold-dk);color:var(--on-chip)}
+.tab .dot{position:absolute;top:5px;right:6px;width:6px;height:6px;background:var(--c-ucsp)}
+
+.legend{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:16px 28px;margin-top:30px;padding-top:24px;border-top:var(--px) solid var(--win-hi)}
+.lg{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:12px}
+.sw{width:20px;height:20px;background:var(--c);box-shadow:inset 0 calc(var(--px) * -1) 0 0 color-mix(in srgb,var(--c) 70%,var(--shade))}
+.lg b{display:block;font:700 16px/1.15 var(--f-pixel);text-transform:uppercase;color:var(--ink)}
+.lg span{display:block;margin-top:3px;font:400 14px/1.25 var(--f-body);color:var(--ink-dim)}
+.lg em{font:600 13px/1 var(--f-body);font-style:normal;color:var(--ink-faint);font-variant-numeric:tabular-nums;white-space:nowrap}
+
+/* ---------- cleaners ---------- */
+.crews{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:30px 24px}
+.crew{--bg:var(--win-hi);--drop:transparent;position:relative;min-width:0;padding:20px 18px 22px;display:flex;flex-direction:column;gap:14px}
+.crew-hd{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.crew-day{font:700 24px/1 var(--f-pixel);color:var(--ink)}
+.crew-n{font:600 13px/1 var(--f-body);letter-spacing:.12em;text-transform:uppercase;color:var(--ink-dim)}
+.crew ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:9px}
+.crew li{display:flex;align-items:center;gap:11px;min-width:0;font:500 19px/1.2 var(--f-body);overflow-wrap:anywhere}
+.crew li::before{content:"";flex:none;width:8px;height:8px;background:var(--ink-faint)}
+.crew.is-focus{--edge:var(--gold);--bg:color-mix(in srgb,var(--gold) 10%,var(--win-hi))}
+.crew.is-focus .crew-day{color:var(--gold)}
+.crew.is-focus li::before{background:var(--gold)}
+.crew>.badge{position:absolute;top:-13px;left:14px}
+
+.foot{display:flex;flex-wrap:wrap;align-items:center;gap:8px 18px;padding:0 4px;font:500 15px/1.4 var(--f-body);color:var(--ink-dim)}
+
+@media (max-width:880px){
+  .board .crews{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:720px){
+  .board{gap:34px}
+  .board .win{padding:20px 18px 24px}
+  .board .tabs{display:flex}
+  .board .tt{grid-template-columns:var(--plw) minmax(0,1fr);--plw:52px;--chip-fs:18px}
+  .board .tt .corner,.board .tt .dh{display:none}
+  .board .tt [data-day]{grid-column:2}
+  .board .tt[data-show="mon"] [data-day]:not([data-day="mon"]),
+  .board .tt[data-show="tue"] [data-day]:not([data-day="tue"]),
+  .board .tt[data-show="wed"] [data-day]:not([data-day="wed"]),
+  .board .tt[data-show="thu"] [data-day]:not([data-day="thu"]){display:none}
+  .board .focus-col{margin:-8px -7px}
+}
+@media (max-width:520px){
+  h1.title{font-size:48px}
+  .board .crews{gap:26px 18px}
+  .crew{padding:18px 14px 20px}
+  .crew li{font-size:17px}
+}
+
+/* ---------- poster frames ---------- */
+.poster{position:relative;z-index:1}
+.poster-wrap{margin:0 auto;overflow:hidden}
+.poster-back{margin:0;padding:18px max(16px,env(safe-area-inset-left,0px));text-align:center;font:500 15px/1.4 var(--f-body)}
+.frame{position:relative;width:1000px;height:707px;overflow:hidden;transform-origin:0 0;padding:26px 34px 34px;display:flex;flex-direction:column;gap:20px}
+.frame>*:not(.sky){position:relative;z-index:1}
+.p-hd{display:flex;align-items:center;justify-content:space-between;gap:24px}
+.p-brand{display:flex;align-items:center;gap:20px}
+.p-eyebrow{font:700 16px/1 var(--f-pixel);letter-spacing:.08em;text-transform:uppercase;color:var(--gold)}
+.p-title{margin-top:8px;font:700 48px/.9 var(--f-pixel);text-transform:uppercase;color:var(--ink);text-shadow:4px 4px 0 var(--sky-4),8px 8px 0 var(--shade)}
+.p-meta{text-align:right;font:700 16px/1.6 var(--f-pixel);text-transform:uppercase;color:var(--ink-dim)}
+.p-body{flex:1;min-height:0;display:grid;gap:26px}
+.p-body--sched{grid-template-columns:minmax(0,1fr) 236px}
+.p-body--crew{grid-template-columns:repeat(4,minmax(0,1fr));padding-top:8px}
+.p-tt{display:flex;padding:18px 20px 20px}
+.p-tt .tt{flex:1;--pr:minmax(0,1fr);--br:14px;--chip-fs:16px;--plw:48px;row-gap:9px;column-gap:12px}
+.p-tt .dh{font-size:16px;padding-bottom:4px}
+.p-tt .pl{font-size:16px}
+.p-tt .brk-lbl{font-size:11px}
+.p-tt .tag{font-size:11px;padding:3px 6px}
+.p-lg{padding:18px 18px 20px}
+.p-lg .win-title{font-size:16px;margin-bottom:18px}
+.legend--side{grid-template-columns:1fr;gap:15px;margin:0;padding:0;border:0}
+.legend--side .lg{gap:10px}
+.legend--side .sw{width:16px;height:16px}
+.legend--side .lg span{font-size:13px}
+.legend--side .lg em{font-size:12px}
+.frame .crew{--bg:linear-gradient(var(--win-hi) 0 8px,var(--win) 8px);--drop:var(--shade);padding:26px 18px 26px 20px;gap:20px}
+.frame .crew-day{font-size:32px}
+.frame .crew-n{font-size:15px}
+.frame .crew ul{gap:19px;margin-top:4px}
+.frame .crew li{font-size:26px;gap:11px;white-space:nowrap;overflow-wrap:normal}
+.frame .crew li::before{background:var(--gold)}
+</style>
+</head>
+<body>
+
+<div class="sky sky--page" aria-hidden="true"><canvas id="sky"></canvas></div>
+<main class="board" id="board"></main>
+<div class="poster" id="poster" hidden>
+  <div class="poster-wrap" id="pwrap"></div>
+  <p class="poster-back"><a href="#board">Back to the class board</a></p>
+</div>
+
+<script>
+(() => {
+  /* ---------------- data (from the class's own schedule + cleaners sheets) ---------------- */
+  const SUBJ = {
+    UCSP: { label: "UCSP",           name: "Understanding Culture, Society & Politics", c: "--c-ucsp" },
+    SP:   { label: "SP",             name: "Statistics & Probability",                c: "--c-sp" },
+    CHEM: { label: "CHEM",           name: "General Chemistry",                       c: "--c-chem" },
+    BP:   { label: "BIO / PHYS",     name: "General Biology / General Physics",       c: "--c-bp" },
+    PR2:  { label: "PR2 / CAPSTONE", name: "Practical Research 2 / Capstone",          c: "--c-pr2" },
+    CLE:  { label: "CLE",            name: "Christian Living Education",              c: "--c-cle" },
+    PEH:  { label: "PEH",            name: "Physical Education & Health",             c: "--c-peh" },
+  };
+  const DAYS = [
+    { k: "mon", s: "Mon", l: "Monday" },
+    { k: "tue", s: "Tue", l: "Tuesday" },
+    { k: "wed", s: "Wed", l: "Wednesday" },
+    { k: "thu", s: "Thu", l: "Thursday" },
+  ];
+  const ORD = { 2: "2nd", 3: "3rd", 4: "4th", 5: "5th", 6: "6th", 7: "7th", 8: "8th" };
+  const GROUPS = [[2], [3, 4], [5, 6], [7, 8]];   // a break sits between each group
+  const HP = [5, 3, 1];                            // hearts left after each break
+  const SCHED = {                                  // periods 2nd..8th
+    mon: ["UCSP", "SP",   "UCSP", "SP",  "PR2", "BP",  "PEH"],
+    tue: ["SP",   "UCSP", "CHEM", "PR2", "BP",  "BP",  "PR2"],
+    wed: ["UCSP", "PR2",  "PR2",  "PR2", "BP",  "PR2", "CHEM"],
+    thu: ["BP",   "BP",   "CLE",  "BP",  "BP",  "PR2", "CHEM"],
+  };
+  const CREW = {
+    mon: ["Vitualla", "Radaza", "Lanic", "Sanchez", "Bayron", "Olivar", "Gulle", "Escano"],
+    tue: ["Dapar", "Ilagan", "Suico", "Amper", "Agsaullo", "Mandi", "Tiempo"],
+    wed: ["Tesoro", "Embate", "Espada", "Bahalla", "Cabonce", "Magbanua", "Aguiluz"],
+    thu: ["Salarda", "Evacuado", "Boiser", "Semblante", "Imboy", "Satorre", "Patindol"],
+  };
+
+  /* ---------------- derived ---------------- */
+  const ROW = {}, BRK_ROWS = [];
+  { let r = 2; GROUPS.forEach((g, gi) => { g.forEach(p => { ROW[p] = r++; }); if (gi < GROUPS.length - 1) BRK_ROWS.push(r++); }); }
+
+  const blocksByGroup = d => GROUPS.map(g => {
+    const out = []; let cur = null;
+    g.forEach(p => {
+      const s = SCHED[d][p - 2];
+      if (cur && cur.s === s) { cur.to = p; cur.n++; }
+      else { cur = { s, from: p, to: p, n: 1 }; out.push(cur); }
+    });
+    return out;
+  });
+  const COUNT = {};
+  Object.values(SCHED).flat().forEach(s => { COUNT[s] = (COUNT[s] || 0) + 1; });
+  const LEGEND = Object.keys(SUBJ).sort((a, b) => COUNT[b] - COUNT[a]);
+  const span = b => ORD[b.from] + (b.n > 1 ? "–" + ORD[b.to] : "");
+
+  const now = new Date(), dow = now.getDay();
+  const todayIdx = dow >= 1 && dow <= 4 ? dow - 1 : -1;   // Mon–Thu on the sheet
+  const focusIdx = todayIdx >= 0 ? todayIdx : 0;          // otherwise the next class day is Monday
+  const focus = DAYS[focusIdx], isToday = todayIdx >= 0;
+  const WD = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const MO = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+  /* ---------------- pixel sprites ---------------- */
+  const PAL = { r: "#ff4f6e", w: "#ffffff", e: "#3b3172", o: "#efe9ff", l: "#62e08c", b: "#eafff2",
+                y: "#ffd447", H: "#d39a5c", h: "#8c5a2c", t: "#ff7366", B: "#ffd447", d: "#c58a24" };
+  const SPR = {
+    heart:  [".rr.rr.", "rwrrrrr", "rrrrrrr", ".rrrrr.", "..rrr..", "...r..."],
+    heart0: [".ee.ee.", "eeeeeee", "eeeeeee", ".eeeee.", "..eee..", "...e..."],
+    spark:  ["..y..", "..y..", "yywyy", "..y..", "..y.."],
+    flask:  ["..oooooo..", "...o..o...", "...ob.o...", "...o..o...", "..o....o..", ".o..b...o.",
+             ".ollllllo.", "olbllllllo", "ollllblllo", "ollllllllo", ".oooooooo."],
+    broom:  ["....hH....", "....hH....", "....hH....", "....hH....", "....hH....", "...tttt...", "...tttt...",
+             "..BBdBBB..", "..BdBBdB..", ".BBdBBdBB.", ".BdBBdBBd.", "BBdBBdBBdB", "BdBBdBBdBB"],
+  };
+  function sprite(rows, scale) {
+    const c = document.createElement("canvas"), w = rows[0].length, h = rows.length;
+    c.width = w; c.height = h; c.className = "spr";
+    c.style.width = w * scale + "px"; c.style.height = h * scale + "px";
+    c.setAttribute("aria-hidden", "true");
+    const x = c.getContext("2d");
+    rows.forEach((row, j) => [...row].forEach((ch, i) => { if (PAL[ch]) { x.fillStyle = PAL[ch]; x.fillRect(i, j, 1, 1); } }));
+    return c;
+  }
+  const hydrate = root => root.querySelectorAll("i[data-spr]").forEach(el => el.replaceWith(sprite(SPR[el.dataset.spr], +(el.dataset.scale || 3))));
+  const spr = (name, scale = 3) => `<i data-spr="${name}" data-scale="${scale}"></i>`;
+
+  /* ---------------- sky ---------------- */
+  function rng(seed) { let s = seed >>> 0; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296); }
+  function paintSky(cv, W, H, { seed = 7, moon = [0.9, 0.14] } = {}) {
+    const S = 4, w = Math.max(1, Math.ceil(W / S)), h = Math.max(1, Math.ceil(H / S));
+    cv.width = w; cv.height = h;
+    const r = rng(seed), stars = [], n = Math.round((w * h) / 170);
+    for (let i = 0; i < n; i++) stars.push({ x: (r() * w) | 0, y: (Math.pow(r(), 1.7) * h * 0.8) | 0, b: r(), ph: r() * 6.28 });
+    const x = cv.getContext("2d");
+    const draw = t => {
+      x.clearRect(0, 0, w, h);
+      for (const s of stars) {
+        if (s.b > 0.965) {
+          x.globalAlpha = 1; x.fillStyle = "#ffe58a";
+          x.fillRect(s.x, s.y - 1, 1, 3); x.fillRect(s.x - 1, s.y, 3, 1);
+          x.fillStyle = "#ffffff"; x.fillRect(s.x, s.y, 1, 1);
+        } else {
+          const b = t == null ? s.b : Math.min(1, Math.max(0, s.b + Math.sin(t + s.ph) * 0.3));
+          x.globalAlpha = 0.22 + b * 0.7; x.fillStyle = b > 0.7 ? "#ffffff" : "#c9c0ff";
+          x.fillRect(s.x, s.y, 1, 1);
+        }
+      }
+      x.globalAlpha = 1;
+      const cx = Math.round(w * moon[0]), cy = Math.round(h * moon[1]), R = Math.max(5, Math.round(Math.min(w, h) * 0.055));
+      for (let j = -R; j <= R; j++) for (let i = -R; i <= R; i++) {
+        const d = Math.hypot(i, j); if (d > R) continue;
+        if (Math.hypot(i + R * 0.5, j + R * 0.35) < R * 0.88) continue;
+        x.fillStyle = d > R - 1.2 ? "#f0b94a" : "#fff1b8"; x.fillRect(cx + i, cy + j, 1, 1);
+      }
+    };
+    draw(null);
+    return draw;
+  }
+
+  /* ---------------- pieces ---------------- */
+  const chip = (s, inner = "", style = "", attrs = "") =>
+    `<div class="chip" style="--c:var(${SUBJ[s].c});${style}" ${attrs}><span class="code">${SUBJ[s].label}</span>${inner}</div>`;
+
+  function timetable({ poster = false } = {}) {
+    const hs = poster ? 2 : 3;
+    let h = `<div class="tt" id="${poster ? "ptt" : "tt"}" data-show="${focus.k}">`;
+    if (!poster) h += `<div class="focus-col pxbox" data-day="${focus.k}" style="--col:${focusIdx + 2}" aria-hidden="true"></div>`;
+    h += `<div class="corner">Period</div>`;
+    DAYS.forEach((d, i) => {
+      const f = !poster && i === focusIdx;
+      h += `<div class="dh${f ? " is-focus" : ""}" data-day="${d.k}" style="--col:${i + 2}">${f ? `<span class="badge">${isToday ? "Today" : "Next up"}</span>` : ""}<span>${d.s}</span></div>`;
+    });
+    Object.entries(ROW).forEach(([p, r]) => { h += `<div class="pl" style="--r:${r}">${ORD[p]}</div>`; });
+    BRK_ROWS.forEach((r, i) => {
+      const hearts = Array.from({ length: 6 }, (_, j) => spr(j < HP[i] ? "heart" : "heart0", hs)).join("");
+      h += `<div class="brk" style="--r:${r}"><span class="brk-lbl">Break</span><span class="dots"></span><span class="hp" role="img" aria-label="HP ${HP[i]} of 6"><b>HP</b>${hearts}</span><span class="dots"></span></div>`;
+    });
+    DAYS.forEach((d, i) => blocksByGroup(d.k).flat().forEach(b => {
+      h += chip(b.s, b.n > 1 ? `<span class="tag">${b.n} periods</span>` : "",
+        `--col:${i + 2};--r:${ROW[b.from]};--s:${b.n}`,
+        `data-day="${d.k}" title="${d.l}, ${span(b)}: ${SUBJ[b.s].name}"`);
+    }));
+    return h + `</div>`;
+  }
+
+  const legend = () => LEGEND.map(s =>
+    `<div class="lg"><span class="sw" style="--c:var(${SUBJ[s].c})"></span><div><b>${SUBJ[s].label}</b><span>${SUBJ[s].name}</span></div><em title="${COUNT[s]} periods a week">${COUNT[s]}/wk</em></div>`
+  ).join("");
+
+  const crews = ({ poster = false } = {}) => DAYS.map((d, i) => {
+    const f = !poster && i === focusIdx;
+    return `<div class="crew pxbox${f ? " is-focus" : ""}">${f ? `<span class="badge">${isToday ? "On duty today" : "Next up"}</span>` : ""}
+      <div class="crew-hd"><span class="crew-day">${d.s}</span>${spr("broom", poster ? 4 : 3)}</div>
+      <div class="crew-n">${CREW[d.k].length} cleaners</div>
+      <ul>${CREW[d.k].map(n => `<li>${n}</li>`).join("")}</ul></div>`;
+  }).join("");
+
+  function quest() {
+    const line = blocksByGroup(focus.k)
+      .map(g => g.map(b => `<div class="mini"><span class="mini-p">${span(b)}</span>${chip(b.s)}</div>`).join(""))
+      .join(`<div class="mini-brk" role="img" aria-label="Break">${spr("heart", 3)}</div>`);
+    const note = isToday ? `${focus.l}, ${now.getDate()} ${MO[now.getMonth()]}` : `It's ${WD[dow]}. Here's Monday.`;
+    return `<section class="win pxbox" aria-labelledby="q-title">
+      <div class="win-hd"><h2 class="win-title" id="q-title">${spr("spark", 4)}${isToday ? "Today" : "Next up"} · ${focus.l}</h2><span class="win-note">${note}</span></div>
+      <div class="lineup">${line}</div>
+      <div class="crewline"><span class="lbl">Cleaning crew</span><div class="tags">${CREW[focus.k].map(n => `<span class="ntag pxbox">${n}</span>`).join("")}</div></div>
+    </section>`;
+  }
+
+  function board() {
+    const tabs = DAYS.map((d, i) =>
+      `<button type="button" class="tab pxbox" id="tab-${d.k}" data-k="${d.k}" aria-pressed="${i === focusIdx}">${d.s}${i === todayIdx ? `<span class="dot" aria-label="today"></span>` : ""}</button>`
+    ).join("");
+    return `
+      <header class="top">
+        <div class="brand">${spr("flask", 6)}<div><div class="eyebrow">Class board</div><h1 class="title">STEM B</h1></div></div>
+        <div class="datechip pxbox">${WD[dow].slice(0, 3)} ${now.getDate()} ${MO[now.getMonth()]}</div>
+      </header>
+      ${quest()}
+      <section class="win pxbox" id="schedule" aria-labelledby="s-title">
+        <div class="win-hd"><h2 class="win-title" id="s-title">${spr("flask", 3)}Weekly schedule</h2><span class="win-note">2nd to 8th period, Monday to Thursday</span></div>
+        <div class="tabs" role="group" aria-label="Pick a day">${tabs}</div>
+        ${timetable()}
+        <div class="legend">${legend()}</div>
+      </section>
+      <section class="win pxbox" id="cleaners" aria-labelledby="c-title">
+        <div class="win-hd"><h2 class="win-title" id="c-title">${spr("broom", 3)}Cleaners</h2><span class="win-note">Cleaning crew for each day</span></div>
+        <div class="crews">${crews()}</div>
+      </section>
+      <footer class="foot"><span>Poster views, sized for screenshots:</span><a href="#poster-schedule">Schedule poster</a><a href="#poster-cleaners">Cleaners poster</a></footer>`;
+  }
+
+  function poster(kind) {
+    const sched = kind === "schedule";
+    return `<div class="frame" id="frame">
+      <div class="sky sky--abs"><canvas id="psky"></canvas></div>
+      <header class="p-hd">
+        <div class="p-brand">${spr(sched ? "flask" : "broom", 6)}<div><div class="p-eyebrow">STEM B Class</div><div class="p-title">${sched ? "Schedule" : "Cleaners"}</div></div></div>
+        <div class="p-meta">${sched ? "2nd–8th period<br>Monday–Thursday" : "Cleaning crew<br>Monday–Thursday"}</div>
+      </header>
+      <div class="p-body ${sched ? "p-body--sched" : "p-body--crew"}">
+        ${sched
+          ? `<section class="win pxbox p-tt">${timetable({ poster: true })}</section>
+             <aside class="win pxbox p-lg"><h2 class="win-title">Subjects</h2><div class="legend legend--side">${legend()}</div></aside>`
+          : crews({ poster: true })}
+      </div>
+    </div>`;
+  }
+
+  /* ---------------- mount ---------------- */
+  const $ = s => document.querySelector(s);
+  const boardEl = $("#board"), posterEl = $("#poster"), wrap = $("#pwrap");
+  boardEl.innerHTML = board();
+  hydrate(boardEl);
+
+  boardEl.querySelectorAll(".tab").forEach(btn => btn.addEventListener("click", () => {
+    $("#tt").dataset.show = btn.dataset.k;
+    boardEl.querySelectorAll(".tab").forEach(b => b.setAttribute("aria-pressed", String(b === btn)));
+  }));
+
+  const skyCv = $("#sky");
+  let drawSky = paintSky(skyCv, innerWidth, innerHeight);
+  const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (!still) setInterval(() => { if (!document.hidden) drawSky(performance.now() / 650); }, 220);
+
+  function fitPoster() {
+    const fr = $("#frame"); if (!fr) return;
+    const s = Math.min(1, document.documentElement.clientWidth / 1000);
+    fr.style.transform = `scale(${s})`;
+    wrap.style.width = 1000 * s + "px"; wrap.style.height = 707 * s + "px";
+  }
+
+  function route() {
+    const h = location.hash.slice(1);
+    const kind = h === "poster-schedule" ? "schedule" : h === "poster-cleaners" ? "cleaners" : null;
+    if (kind) {
+      wrap.innerHTML = poster(kind);
+      hydrate(wrap);
+      paintSky($("#psky"), 1000, 707, { seed: kind === "schedule" ? 11 : 23, moon: [0.62, 0.1] });
+      boardEl.hidden = true; posterEl.hidden = false;
+      fitPoster(); scrollTo(0, 0);
+    } else {
+      posterEl.hidden = true; boardEl.hidden = false; wrap.innerHTML = "";
+    }
+  }
+  addEventListener("hashchange", route);
+  let rt;
+  addEventListener("resize", () => {
+    clearTimeout(rt);
+    rt = setTimeout(() => { drawSky = paintSky(skyCv, innerWidth, innerHeight); fitPoster(); }, 150);
+  });
+  route();
+})();
+</script>
+</body>
+</html>
